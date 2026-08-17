@@ -2,7 +2,7 @@
 
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-const BASEURL = import.meta.env.VITE_SERVERURL;
+const BASEURL = "https://etypoto.onrender.com/api";
 
 const apiClient = axios.create({
   baseURL: BASEURL,
