@@ -1,7 +1,8 @@
-/*eslint-disable*/
+/* eslint-disable */
+
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-const BASEURL = import.meta.env.VITE_SERVERURL!;
+const BASEURL = import.meta.env.VITE_SERVERURL;
 
 const apiClient = axios.create({
   baseURL: BASEURL,
@@ -10,74 +11,96 @@ const apiClient = axios.create({
   },
 });
 
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// =====================================================
+// Request Interceptor
+// =====================================================
 
-let isRefreshing = false;
-let queue: ((token: string) => void)[] = [];
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("access_token");
 
-const normalizeError = (error: AxiosError) => {
-  const message =
-    (error.response?.data as any)?.message ||
-    error.message ||
-    "Something went wrong";
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  const status = error.response?.status || 500;
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
 
-  return { message, status };
-};
+// =====================================================
+// Response Interceptor
+// =====================================================
 
 apiClient.interceptors.response.use(
-  (res) => res,
+  (response) => response,
+
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+
+    // Only handle 401
     if (error.response?.status !== 401) {
-      return Promise.reject(normalizeError(error));
+      return Promise.reject(error);
     }
-    if (originalRequest._retry) {
-      return Promise.reject(normalizeError(error));
+
+    // Don't retry the same request
+    if (originalRequest?._retry) {
+      localStorage.removeItem("access_token");
+
+      return Promise.reject(error);
     }
+
     originalRequest._retry = true;
-    if (!isRefreshing) {
-      isRefreshing = true;
-      try {
-        const res = await axios.post(`${BASEURL}/auth/telegram`, {
-          initData: (window as any).Telegram?.WebApp?.initData,
-        });
 
-        const token = res.data?.access_token;
-        if (!token) throw new Error("Auth failed");
+    // Get Telegram initData
+    const initData = (window as any).Telegram?.WebApp?.initData;
 
-        localStorage.setItem("access_token", token);
+    if (!initData) {
+      localStorage.removeItem("access_token");
 
-        queue.forEach((cb) => cb(token));
-        queue = [];
-
-        isRefreshing = false;
-
-        originalRequest.headers.Authorization = `Bearer ${token}`;
-        return apiClient(originalRequest);
-      } catch (err: any) {
-        isRefreshing = false;
-        queue = [];
-
-        return Promise.reject(normalizeError(err as AxiosError));
-      }
+      return Promise.reject(new Error("Telegram initData not found"));
     }
 
-    return new Promise((resolve) => {
-      queue.push((token: string) => {
-        originalRequest.headers.Authorization = `Bearer ${token}`;
-        resolve(apiClient(originalRequest));
-      });
-    });
+    try {
+      // IMPORTANT:
+      // Use plain axios here, NOT apiClient.
+      // This prevents the interceptor from intercepting
+      // the authentication request itself.
+      const response = await axios.post(
+        `${BASEURL}/auth/telegram`,
+        {
+          initData,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      const token = response.data?.access_token;
+
+      if (!token) {
+        throw new Error("Authentication failed");
+      }
+
+      // Save new token
+      localStorage.setItem("access_token", token);
+
+      // Attach token to original request
+      originalRequest.headers.Authorization = `Bearer ${token}`;
+
+      // Retry original request
+      return apiClient(originalRequest);
+    } catch (authError) {
+      localStorage.removeItem("access_token");
+
+      return Promise.reject(authError);
+    }
   },
 );
 

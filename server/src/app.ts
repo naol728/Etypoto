@@ -8,6 +8,6 @@ app.use(express.json());
 
 app.use(morgan("dev"));
 
-app.use("/auth", authRoute);
+app.use("/api/auth", authRoute);
 
 export default app;

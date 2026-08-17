@@ -1,47 +1,48 @@
-
-import { useEffect, useState } from 'react';
-import { useAppDispatch } from './store/hook';
-import { initAuth } from './store/slice/auth';
-import { Toaster } from "@/components/ui/sonner"
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { useAppDispatch } from "./store/hook";
+import { initAuth } from "./store/slice/auth";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 
 function App() {
   const dispatch = useAppDispatch();
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
-    async function init() {
+    const init = async () => {
       try {
         await dispatch(initAuth()).unwrap();
-
       } catch (err: unknown) {
+        console.error("Auth initialization error:", err);
+
         let message = "Initialization failed";
+
         if (err instanceof Error) {
           message = err.message;
+        } else if (typeof err === "string") {
+          message = err;
         }
+
         toast.error(message);
       } finally {
         setReady(true);
       }
-    }
+    };
 
     init();
-  });
-
+  }, [dispatch]);
 
   if (!ready) {
-    return (
-      <>loading
-      </>
-    );
+    return <div>Loading...</div>;
   }
 
   return (
     <>
-      etypoto
-      <Toaster />
+      <div>etypoto</div>
 
+      <Toaster />
     </>
-  )
+  );
 }
 
-export default App
+export default App;
