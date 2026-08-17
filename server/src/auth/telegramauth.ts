@@ -8,6 +8,34 @@ import { AppError } from "../utils/AppError";
 
 export const telegramAuth = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
+    // =====================================================
+    // Helper: Get user with wallets
+    // =====================================================
+
+    const getUserWithWallets = async (userId: string) => {
+      return await supabase
+        .from("users")
+        .select(
+          `
+          *,
+          wallets (
+            id,
+            asset,
+            available_balance,
+            locked_balance,
+            created_at,
+            updated_at
+          )
+        `,
+        )
+        .eq("id", userId)
+        .single();
+    };
+
+    // =====================================================
+    // 1. JWT Authentication
+    // =====================================================
+
     const authHeader = req.headers.authorization;
 
     if (authHeader?.startsWith("Bearer ")) {
@@ -23,22 +51,7 @@ export const telegramAuth = catchAsync(
           telegramId: number;
         };
 
-        const { data: user, error } = await supabase
-          .from("users")
-          .select(
-            `
-            *,
-            wallets (
-              id,
-              asset,
-              balance,
-              locked_balance,
-              created_at
-            )
-            `,
-          )
-          .eq("id", payload.userId)
-          .single();
+        const { data: user, error } = await getUserWithWallets(payload.userId);
 
         if (error || !user) {
           return next(new AppError("User not found", 401));
@@ -58,9 +71,15 @@ export const telegramAuth = catchAsync(
           return next(new AppError("Invalid token", 401));
         }
 
+        console.error("JWT authentication error:", err);
+
         return next(new AppError("Authentication failed", 401));
       }
     }
+
+    // =====================================================
+    // 2. Telegram Authentication
+    // =====================================================
 
     const { initData } = req.body;
 
@@ -72,11 +91,17 @@ export const telegramAuth = catchAsync(
       return next(new AppError("Telegram bot token is not configured", 500));
     }
 
+    // =====================================================
+    // 3. Validate Telegram initData
+    // =====================================================
+
     let tgUser;
 
     try {
       tgUser = validateTelegramData(env.bottoken, initData);
     } catch (err) {
+      console.error("Telegram validation error:", err);
+
       return next(new AppError("Invalid Telegram data", 401));
     }
 
@@ -84,14 +109,18 @@ export const telegramAuth = catchAsync(
       return next(new AppError("Telegram user not found", 401));
     }
 
+    // =====================================================
+    // 4. Create / Fetch User
+    // =====================================================
+
     const { data: user, error: userError } = await supabase
       .from("users")
       .upsert(
         {
           telegram_id: tgUser.user.id,
-          username: tgUser.user.username ?? null,
-          Fname: tgUser.user.first_name ?? null,
-          Lname: tgUser.user.last_name ?? null,
+          telegram_username: tgUser.user.username ?? null,
+          telegram_first_name: tgUser.user.first_name ?? null,
+          telegram_last_name: tgUser.user.last_name ?? null,
         },
         {
           onConflict: "telegram_id",
@@ -106,9 +135,17 @@ export const telegramAuth = catchAsync(
       return next(new AppError("Failed to create or fetch user", 500));
     }
 
+    // =====================================================
+    // 5. JWT Secret
+    // =====================================================
+
     if (!env.jwtsecrete) {
       return next(new AppError("JWT secret is not configured", 500));
     }
+
+    // =====================================================
+    // 6. Create JWT
+    // =====================================================
 
     const token = jwt.sign(
       {
@@ -121,28 +158,23 @@ export const telegramAuth = catchAsync(
       },
     );
 
-    const { data: userdata, error: userdataError } = await supabase
-      .from("users")
-      .select(
-        `
-        *,
-        wallets (
-          id,
-          asset,
-          balance,
-          locked_balance,
-          created_at
-        )
-        `,
-      )
-      .eq("id", user.id)
-      .single();
+    // =====================================================
+    // 7. Fetch User + Wallets
+    // =====================================================
+
+    const { data: userdata, error: userdataError } = await getUserWithWallets(
+      user.id,
+    );
 
     if (userdataError || !userdata) {
       console.error("User fetch error:", userdataError);
 
       return next(new AppError("Failed to fetch user information", 500));
     }
+
+    // =====================================================
+    // 8. Response
+    // =====================================================
 
     return res.status(200).json({
       status: true,
@@ -162,19 +194,38 @@ interface AuthRequest extends Request {
 export const me = catchAsync(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = req.user.userId;
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from("users")
       .select(
-        `*,wallets (
-        balance,
-        locked_balance
-      )`,
+        `
+        *,
+        wallets (
+          id,
+          asset,
+          available_balance,
+          locked_balance,
+          created_at,
+          updated_at
+        )
+      `,
       )
       .eq("id", userId)
       .single();
-    if (!data) {
-      return next(new AppError("User not Found", 404));
+
+    if (error) {
+      console.error("Get current user error:", error);
+
+      return next(new AppError("Failed to fetch user", 500));
     }
-    res.json(data);
+
+    if (!data) {
+      return next(new AppError("User not found", 404));
+    }
+
+    return res.status(200).json({
+      status: true,
+      user: data,
+    });
   },
 );
