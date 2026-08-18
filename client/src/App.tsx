@@ -13,7 +13,6 @@ function App() {
       try {
         await dispatch(initAuth());
       } catch (err: unknown) {
-        console.error("Auth initialization error:", err);
 
         let message = "Initialization failed";
 

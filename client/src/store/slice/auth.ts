@@ -40,27 +40,13 @@ export const initAuth = createAsyncThunk(
   "auth/init",
   async (_, { rejectWithValue }) => {
     try {
-      console.log("🔥 initAuth started");
-
       const telegram = (window as any).Telegram;
 
-      console.log("Telegram object:", telegram);
-
       const initData = telegram?.WebApp?.initData;
-
-      console.log("Telegram initData:", initData);
-
-      if (!initData) {
-        throw new Error("Telegram initData not found");
-      }
-
-      console.log("🚀 Sending request to backend...");
 
       const res = await apiClient.post("/auth/telegram", {
         initData,
       });
-
-      console.log("✅ Backend response:", res.data);
 
       const data = res.data;
 
@@ -69,6 +55,7 @@ export const initAuth = createAsyncThunk(
       }
 
       localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
 
       return data.user as User;
     } catch (error: any) {
