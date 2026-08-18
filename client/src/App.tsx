@@ -1,26 +1,33 @@
 import { useEffect, useState } from "react";
-import { useAppDispatch } from "./store/hook";
-import { initAuth } from "./store/slice/auth";
+import { useAppDispatch, useAppSelector } from "./store/hook";
+import { initAuth, setUser } from "./store/slice/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import PhoneNumberSetup from "./components/ui/PhoneNumberSetup";
 
 function App() {
   const dispatch = useAppDispatch();
+
+  const user = useAppSelector(
+    (state) => state.auth.user,
+  );
+
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       try {
-        await dispatch(initAuth());
+        await dispatch(initAuth()).unwrap();
       } catch (err: unknown) {
+        console.error(
+          "Initialization error:",
+          err,
+        );
 
-        let message = "Initialization failed";
-
-        if (err instanceof Error) {
-          message = err.message;
-        } else if (typeof err === "string") {
-          message = err;
-        }
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Initialization failed";
 
         toast.error(message);
       } finally {
@@ -32,8 +39,38 @@ function App() {
   }, [dispatch]);
 
   if (!ready) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        Loading...
+      </div>
+    );
   }
+
+
+
+  if (user && !user.phone) {
+    return (
+      <>
+        <PhoneNumberSetup
+          telegramId={user.telegram_id}
+          onComplete={(phone) => {
+            console.log("Phone saved:", phone);
+
+            dispatch(
+              setUser({
+                ...user,
+                phone,
+              }),
+            );
+          }}
+        />
+
+        <Toaster />
+      </>
+    );
+  }
+
+
 
   return (
     <>

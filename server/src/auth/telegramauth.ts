@@ -229,3 +229,80 @@ export const me = catchAsync(
     });
   },
 );
+
+
+export const updateTelegramPhone = catchAsync(
+  async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const {
+      telegram_id,
+      phone,
+    } = req.body;
+
+    if (!telegram_id || !phone) {
+      return next(
+        new AppError(
+          "Telegram ID and phone are required",
+          400,
+        ),
+      );
+    }
+
+    const { data: user, error: findError } =
+      await supabase
+        .from("users")
+        .select("id, telegram_id, phone")
+        .eq("telegram_id", telegram_id)
+        .single();
+
+    if (findError || !user) {
+      return next(
+        new AppError("User not found", 404),
+      );
+    }
+
+    const { data: updatedUser, error } =
+      await supabase
+        .from("users")
+        .update({
+          phone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("telegram_id", telegram_id)
+        .select(`
+          *,
+          wallets (
+            id,
+            asset,
+            available_balance,
+            locked_balance,
+            created_at,
+            updated_at
+          )
+        `)
+        .single();
+
+    if (error || !updatedUser) {
+      console.error(
+        "Phone update error:",
+        error,
+      );
+
+      return next(
+        new AppError(
+          "Failed to update phone number",
+          500,
+        ),
+      );
+    }
+
+    return res.status(200).json({
+      status: true,
+      message: "Phone number updated successfully",
+      user: updatedUser,
+    });
+  },
+);

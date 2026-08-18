@@ -2,7 +2,7 @@
 
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-const BASEURL =import.meta.env.;
+const BASEURL = import.meta.env.VITE_SERVERURL!;
 
 const apiClient = axios.create({
   baseURL: BASEURL,

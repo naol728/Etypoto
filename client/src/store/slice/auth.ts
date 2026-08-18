@@ -10,20 +10,36 @@ import {
 export interface Wallet {
   id: string;
   asset: "ETB" | "USDT";
-  balance: number;
+  available_balance: number;
   locked_balance: number;
   created_at: string;
+  updated_at: string;
 }
 
 export interface User {
   id: string;
+
   telegram_id: number;
-  username: string | null;
+
+  telegram_username: string | null;
+  telegram_first_name: string | null;
+  telegram_last_name: string | null;
+
+  phone: string | null;
+
+  kyc_status: "pending" | "verified" | "rejected";
+
+  veritas_user_id: string | null;
+  kyc_verified_at: string | null;
+
+  status: "active" | "suspended" | "blocked";
+
+  referral_code: string | null;
+  referred_by: string | null;
+
   created_at: string;
   updated_at: string;
-  Fname: string | null;
-  Lname: string | null;
-  referral_id: string | null;
+
   wallets: Wallet[];
 }
 
@@ -36,13 +52,30 @@ const initialState: AuthState = {
   user: null,
   loading: true,
 };
+
 export const initAuth = createAsyncThunk(
   "auth/init",
+
   async (_, { rejectWithValue }) => {
     try {
       const telegram = (window as any).Telegram;
 
-      const initData = telegram?.WebApp?.initData;
+      const webApp = telegram?.WebApp;
+
+      if (!webApp) {
+        throw new Error("Please open this application inside Telegram.");
+      }
+
+      webApp.ready();
+      webApp.expand();
+
+      const initData = webApp.initData;
+
+      if (!initData) {
+        throw new Error("Telegram authentication data not found.");
+      }
+
+      console.log("🚀 Sending Telegram authentication...");
 
       const res = await apiClient.post("/auth/telegram", {
         initData,
@@ -55,7 +88,10 @@ export const initAuth = createAsyncThunk(
       }
 
       localStorage.setItem("access_token", data.access_token);
+
       localStorage.setItem("user", JSON.stringify(data.user));
+
+      console.log("✅ Telegram authentication successful");
 
       return data.user as User;
     } catch (error: any) {
@@ -69,6 +105,7 @@ export const initAuth = createAsyncThunk(
     }
   },
 );
+
 const authSlice = createSlice({
   name: "auth",
 
@@ -79,7 +116,7 @@ const authSlice = createSlice({
       state,
       action: PayloadAction<{
         asset: "ETB" | "USDT";
-        balance: number;
+        available_balance: number;
         locked_balance: number;
       }>,
     ) => {
@@ -90,13 +127,24 @@ const authSlice = createSlice({
       );
 
       if (wallet) {
-        wallet.balance = action.payload.balance;
+        wallet.available_balance = action.payload.available_balance;
+
         wallet.locked_balance = action.payload.locked_balance;
       }
     },
 
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
+
+      localStorage.setItem("user", JSON.stringify(action.payload));
+    },
+
+    setUserPhone: (state, action: PayloadAction<string>) => {
+      if (!state.user) return;
+
+      state.user.phone = action.payload;
+
+      localStorage.setItem("user", JSON.stringify(state.user));
     },
 
     logout: (state) => {
@@ -104,8 +152,13 @@ const authSlice = createSlice({
       state.loading = false;
 
       localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
     },
   },
+
+  // =================================================
+  // Async Actions
+  // =================================================
 
   extraReducers: (builder) => {
     builder
@@ -126,6 +179,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setUserWallet, setUser, logout } = authSlice.actions;
+export const { setUserWallet, setUser, setUserPhone, logout } =
+  authSlice.actions;
 
 export default authSlice.reducer;
