@@ -2,7 +2,7 @@
 
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-const BASEURL = "http://localhost:5000/api";
+const BASEURL =import.meta.env.;
 
 const apiClient = axios.create({
   baseURL: BASEURL,
