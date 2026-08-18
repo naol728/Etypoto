@@ -1,7 +1,27 @@
-/*eslint-disable*/
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { sharePhone } from "@/api/auth";
+
+interface TelegramWebApp {
+    requestContact: (
+        callback: (shared: boolean) => void
+    ) => void;
+
+    initDataUnsafe?: {
+        user?: {
+            id: number;
+            phone_number?: string;
+        };
+    };
+}
+
+interface Telegram {
+    WebApp?: TelegramWebApp;
+}
+
+interface TelegramWindow {
+    Telegram?: Telegram;
+}
 
 interface PhoneNumberSetupProps {
     telegramId: number;
@@ -13,53 +33,74 @@ export default function PhoneNumberSetup({
     onComplete,
 }: PhoneNumberSetupProps) {
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const requestPhone = () => {
-        const webApp = (window as any).Telegram?.WebApp;
+    const requestPhone = (): void => {
+        setError(null);
+
+        const telegramWindow =
+            window as unknown as TelegramWindow;
+
+        const webApp = telegramWindow.Telegram?.WebApp;
 
         if (!webApp) {
-            alert("Please open this app inside Telegram.");
+            setError(
+                "Please open this application inside Telegram."
+            );
             return;
         }
 
         setLoading(true);
 
-        webApp.requestContact(async (shared: boolean) => {
-            if (!shared) {
-                setLoading(false);
-                return;
-            }
+        webApp.requestContact(
+            async (shared: boolean): Promise<void> => {
+                if (!shared) {
+                    setLoading(false);
 
-            try {
-
-                const response = await fetch("/api/auth/phone");
-
-                const data = await response.json();
-
-                const phone = data.phone;
-
-                if (!phone) {
-                    throw new Error("Phone number not received.");
+                    setError(
+                        "You must share your phone number to continue."
+                    );
+                    return;
                 }
 
-                await sharePhone({
-                    telegram_id: telegramId,
-                    phone,
-                });
+                try {
+                    const phone =
+                        webApp.initDataUnsafe?.user?.phone_number;
 
-                onComplete(phone);
-            } catch (error) {
-                console.error("Phone error:", error);
+                    if (!phone) {
+                        throw new Error(
+                            "Telegram did not provide your phone number."
+                        );
+                    }
 
-                alert(
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to save phone number.",
-                );
-            } finally {
-                setLoading(false);
+
+                    const response = await sharePhone({
+                        telegram_id: telegramId,
+                        phone,
+                    });
+
+                    console.log(
+                        "Phone saved:",
+                        response
+                    );
+
+                    onComplete(phone);
+                } catch (error: unknown) {
+                    console.error(
+                        "Phone error:",
+                        error
+                    );
+
+                    setError(
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to save phone number."
+                    );
+                } finally {
+                    setLoading(false);
+                }
             }
-        });
+        );
     };
 
     return (
@@ -72,6 +113,12 @@ export default function PhoneNumberSetup({
                 <p className="mt-2 text-muted-foreground">
                     Share your Telegram phone number to continue.
                 </p>
+
+                {error && (
+                    <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                        {error}
+                    </div>
+                )}
 
                 <Button
                     className="mt-6 w-full"

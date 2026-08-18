@@ -54,7 +54,6 @@ function App() {
         <PhoneNumberSetup
           telegramId={user.telegram_id}
           onComplete={(phone) => {
-            console.log("Phone saved:", phone);
 
             dispatch(
               setUser({
