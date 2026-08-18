@@ -1,35 +1,32 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { sharePhone } from "@/api/auth";
+import { me } from "@/api/auth";
 
 interface TelegramWebApp {
     requestContact: (
         callback: (shared: boolean) => void
     ) => void;
-
-    initDataUnsafe?: {
-        user?: {
-            id: number;
-            phone_number?: string;
-        };
-    };
-}
-
-interface Telegram {
-    WebApp?: TelegramWebApp;
 }
 
 interface TelegramWindow {
-    Telegram?: Telegram;
+    Telegram?: {
+        WebApp?: TelegramWebApp;
+    };
+}
+
+interface User {
+    phone: string | null;
+}
+
+interface MeResponse {
+    user?: User;
 }
 
 interface PhoneNumberSetupProps {
-    telegramId: number;
     onComplete: (phone: string) => void;
 }
 
 export default function PhoneNumberSetup({
-    telegramId,
     onComplete,
 }: PhoneNumberSetupProps) {
     const [loading, setLoading] = useState(false);
@@ -60,34 +57,54 @@ export default function PhoneNumberSetup({
                     setError(
                         "You must share your phone number to continue."
                     );
+
                     return;
                 }
 
                 try {
-                    const phone =
-                        webApp.initDataUnsafe?.user?.phone_number;
+                    /*
+                     * IMPORTANT:
+                     *
+                     * requestContact() does NOT give us the phone number.
+                     *
+                     * Telegram sends the contact to your bot.
+                     *
+                     * Your Supabase Edge Function receives:
+                     *
+                     * message.contact.phone_number
+                     *
+                     * and saves it to:
+                     *
+                     * users.phone
+                     */
+
+                    // Give the Edge Function a moment to process
+                    // the Telegram webhook.
+                    await new Promise<void>((resolve) => {
+                        setTimeout(resolve, 1500);
+                    });
+
+                    /*
+                     * Get the latest authenticated user.
+                     */
+                    const response = await me();
+
+                    const data = response as MeResponse;
+
+                    const phone = data.user?.phone ?? null;
 
                     if (!phone) {
                         throw new Error(
-                            "Telegram did not provide your phone number."
+                            "Phone number is still being processed. Please try again."
                         );
                     }
 
-
-                    const response = await sharePhone({
-                        telegram_id: telegramId,
-                        phone,
-                    });
-
-                    console.log(
-                        "Phone saved:",
-                        response
-                    );
+                    console.log("✅ Phone saved:", phone);
 
                     onComplete(phone);
                 } catch (error: unknown) {
                     console.error(
-                        "Phone error:",
+                        "❌ Phone error:",
                         error
                     );
 
@@ -106,12 +123,14 @@ export default function PhoneNumberSetup({
     return (
         <div className="flex min-h-screen items-center justify-center p-6">
             <div className="w-full max-w-md">
+
                 <h1 className="text-2xl font-bold">
                     Phone Number Required
                 </h1>
 
                 <p className="mt-2 text-muted-foreground">
-                    Share your Telegram phone number to continue.
+                    Share your Telegram phone number to
+                    continue.
                 </p>
 
                 {error && (
@@ -129,6 +148,7 @@ export default function PhoneNumberSetup({
                         ? "Saving..."
                         : "Share Phone Number"}
                 </Button>
+
             </div>
         </div>
     );
