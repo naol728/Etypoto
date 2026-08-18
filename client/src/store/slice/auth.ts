@@ -62,20 +62,18 @@ export const initAuth = createAsyncThunk(
 
       const webApp = telegram?.WebApp;
 
-      if (!webApp) {
-        throw new Error("Please open this application inside Telegram.");
-      }
+      // if (!webApp) {
+      //   throw new Error("Please open this application inside Telegram.");
+      // }
 
       webApp.ready();
       webApp.expand();
 
       const initData = webApp.initData;
 
-      if (!initData) {
-        throw new Error("Telegram authentication data not found.");
-      }
-
-      console.log("🚀 Sending Telegram authentication...");
+      // if (!initData) {
+      //   throw new Error("Telegram authentication data not found.");
+      // }
 
       const res = await apiClient.post("/auth/telegram", {
         initData,
