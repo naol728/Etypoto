@@ -11,7 +11,7 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        await dispatch(initAuth()).unwrap();
+        await dispatch(initAuth());
       } catch (err: unknown) {
         console.error("Auth initialization error:", err);
 

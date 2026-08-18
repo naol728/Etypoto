@@ -2,7 +2,7 @@
 
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-const BASEURL = "https://etypoto.onrender.com/api";
+const BASEURL = "http://localhost:5000/api";
 
 const apiClient = axios.create({
   baseURL: BASEURL,
@@ -13,6 +13,7 @@ const apiClient = axios.create({
 
 // =====================================================
 // Request Interceptor
+
 // =====================================================
 
 apiClient.interceptors.request.use(
