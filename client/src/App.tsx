@@ -52,7 +52,6 @@ function App() {
     return (
       <>
         <PhoneNumberSetup
-          telegramId={user.telegram_id}
           onComplete={(phone) => {
 
             dispatch(
