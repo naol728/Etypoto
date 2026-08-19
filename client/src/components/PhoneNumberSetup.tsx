@@ -62,31 +62,10 @@ export default function PhoneNumberSetup({
                 }
 
                 try {
-                    /*
-                     * IMPORTANT:
-                     *
-                     * requestContact() does NOT give us the phone number.
-                     *
-                     * Telegram sends the contact to your bot.
-                     *
-                     * Your Supabase Edge Function receives:
-                     *
-                     * message.contact.phone_number
-                     *
-                     * and saves it to:
-                     *
-                     * users.phone
-                     */
-
-                    // Give the Edge Function a moment to process
-                    // the Telegram webhook.
                     await new Promise<void>((resolve) => {
                         setTimeout(resolve, 1500);
                     });
 
-                    /*
-                     * Get the latest authenticated user.
-                     */
                     const response = await me();
 
                     const data = response as MeResponse;

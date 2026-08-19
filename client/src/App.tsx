@@ -3,7 +3,14 @@ import { useAppDispatch, useAppSelector } from "./store/hook";
 import { initAuth, setUser } from "./store/slice/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
-import PhoneNumberSetup from "./components/ui/PhoneNumberSetup";
+import PhoneNumberSetup from "./components/PhoneNumberSetup";
+import { Route, Routes } from "react-router-dom";
+import Home from "./pages/user/Home";
+import MainLayout from "./components/MainLayout";
+import Wallet from "./pages/user/Wallet";
+import P2P from "./pages/user/P2P";
+import Orders from "./pages/user/Orders";
+import Profile from "./pages/user/Profile";
 
 function App() {
   const dispatch = useAppDispatch();
@@ -72,8 +79,16 @@ function App() {
 
   return (
     <>
-      <div>etypoto</div>
+      <Routes>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/p2p" element={<P2P />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
 
+      </Routes>
       <Toaster />
     </>
   );
