@@ -7,7 +7,7 @@ export default function MainLayout() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="min-h-screen pb-24">
+      <main className="min-h-screen ">
         <Outlet />
       </main>
 

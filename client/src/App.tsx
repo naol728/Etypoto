@@ -11,6 +11,7 @@ import Wallet from "./pages/user/Wallet";
 import P2P from "./pages/user/P2P";
 import Orders from "./pages/user/Orders";
 import Profile from "./pages/user/Profile";
+import Kyc from "./pages/user/Kyc";
 
 function App() {
   const dispatch = useAppDispatch();
@@ -85,6 +86,7 @@ function App() {
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/p2p" element={<P2P />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/kyc" element={<Kyc />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
 

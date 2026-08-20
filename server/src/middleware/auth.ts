@@ -3,12 +3,8 @@ import { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/AppError";
 import { verifyAccessToken, JwtPayload } from "./../service/token.service";
 
-export interface AuthRequest extends Request {
-  user?: JwtPayload;
-}
-
 export const requireAuth = (
-  req: AuthRequest,
+  req: Request,
   _res: Response,
   next: NextFunction,
 ) => {

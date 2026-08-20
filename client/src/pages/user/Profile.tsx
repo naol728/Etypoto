@@ -18,10 +18,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function Profile() {
   const user = useAppSelector((state) => state.auth.user);
-
+  const navigate = useNavigate()
   if (!user) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
@@ -300,7 +301,7 @@ export default function Profile() {
         <button
           type="button"
           onClick={() => {
-            // navigate("/kyc")
+            navigate("/kyc")
           }}
           className="group flex w-full items-center gap-4 rounded-3xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/30 hover:bg-muted/30 active:scale-[0.99]"
         >
@@ -408,69 +409,69 @@ export default function Profile() {
       {(user.kyc_status === "verified" ||
         user.veritas_user_id ||
         user.kyc_verified_at) && (
-        <div className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold">
-            Verification details
-          </h2>
+          <div className="mt-6">
+            <h2 className="mb-2 text-sm font-semibold">
+              Verification details
+            </h2>
 
-          <div className="rounded-3xl border bg-card p-4 shadow-sm">
+            <div className="rounded-3xl border bg-card p-4 shadow-sm">
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold">
-                  Identity verification
-                </p>
-
-                <p className="text-xs capitalize text-muted-foreground">
-                  Status: {user.kyc_status}
-                </p>
-              </div>
-            </div>
-
-            {user.veritas_user_id && (
-              <>
-                <Separator className="my-4" />
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                </div>
 
                 <div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Verification ID
+                  <p className="text-sm font-semibold">
+                    Identity verification
                   </p>
 
-                  <p className="mt-1 truncate font-mono text-xs">
-                    {user.veritas_user_id}
+                  <p className="text-xs capitalize text-muted-foreground">
+                    Status: {user.kyc_status}
                   </p>
                 </div>
-              </>
-            )}
+              </div>
 
-            {user.kyc_verified_at && (
-              <>
-                <Separator className="my-4" />
-
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+              {user.veritas_user_id && (
+                <>
+                  <Separator className="my-4" />
 
                   <div>
                     <p className="text-[11px] text-muted-foreground">
-                      Verified on
+                      Verification ID
                     </p>
 
-                    <p className="text-xs font-medium">
-                      {new Date(
-                        user.kyc_verified_at,
-                      ).toLocaleDateString()}
+                    <p className="mt-1 truncate font-mono text-xs">
+                      {user.veritas_user_id}
                     </p>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+
+              {user.kyc_verified_at && (
+                <>
+                  <Separator className="my-4" />
+
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Verified on
+                      </p>
+
+                      <p className="text-xs font-medium">
+                        {new Date(
+                          user.kyc_verified_at,
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* =========================================
           LOGOUT
