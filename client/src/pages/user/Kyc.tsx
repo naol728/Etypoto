@@ -151,7 +151,6 @@ export default function Kyc() {
         queryKey: ["kyc-status"],
         queryFn: getKycStatus,
     });
-    console.log(kycResult)
     const [documentType, setDocumentType] =
         useState<DocumentType>("national_id");
 
