@@ -3,6 +3,7 @@ import morgan from "morgan";
 import authRoute from "./routes/auth.route";
 import cors from "cors";
 import kycRoute from "./routes/kyc.route";
+import walletRoute from "./routes/wallet.route";
 
 const app = express();
 app.use(
@@ -17,5 +18,6 @@ app.use(morgan("dev"));
 
 app.use("/api/auth", authRoute);
 app.use("/api/kyc", kycRoute);
+app.use("/api/wallet", walletRoute);
 
 export default app;

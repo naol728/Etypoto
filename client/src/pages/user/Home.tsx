@@ -14,6 +14,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { getMybalance } from "@/api/wallet";
+import { useSelector } from "react-redux";
+import { useAppSelector } from "@/store/hook";
+import Portfolio from "@/components/user/Portfolio";
 
 interface Crypto {
   id: string;
@@ -188,7 +193,7 @@ function CryptoRow({ crypto }: { crypto: Crypto }) {
 }
 
 export default function Home() {
-  const [showBalance, setShowBalance] = useState(true);
+  const user = useAppSelector((state) => state.auth.user)
 
   const gainers = [...cryptoData]
     .filter((coin) => coin.change24h > 0)
@@ -206,117 +211,13 @@ export default function Home() {
       <div className="mb-5 flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            Welcome back
+            Welcome back {user?.telegram_first_name}
           </p>
-
-          <h1 className="text-2xl font-bold tracking-tight">
-            EtyPoto
-          </h1>
         </div>
-
-        <Button
-          variant="outline"
-          size="icon"
-          className="rounded-full"
-          onClick={() =>
-            setShowBalance((value) => !value)
-          }
-        >
-          {showBalance ? (
-            <Eye className="h-4 w-4" />
-          ) : (
-            <EyeOff className="h-4 w-4" />
-          )}
-        </Button>
       </div>
 
       {/* Portfolio */}
-      <Card className="overflow-hidden rounded-3xl border-0 bg-foreground text-background shadow-lg">
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm opacity-70">
-                Total Balance
-              </p>
-
-              <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-                {showBalance ? "$1,284.62" : "••••••"}
-              </h2>
-
-              <p className="mt-1 text-xs opacity-60">
-                Estimated portfolio value
-              </p>
-            </div>
-
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-background/10">
-              <WalletIcon className="h-5 w-5" />
-            </div>
-          </div>
-
-          {/* Wallet balances */}
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-background/10 p-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-background text-xs font-bold text-foreground">
-                  $
-                </div>
-
-                <span className="text-sm opacity-70">
-                  USDT
-                </span>
-              </div>
-
-              <p className="mt-3 text-lg font-semibold">
-                {showBalance
-                  ? "824.62 USDT"
-                  : "••••••"}
-              </p>
-
-              <p className="mt-1 text-xs opacity-50">
-                ≈ $824.62
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-background/10 p-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-background text-xs font-bold text-foreground">
-                  Br
-                </div>
-
-                <span className="text-sm opacity-70">
-                  ETB
-                </span>
-              </div>
-
-              <p className="mt-3 text-lg font-semibold">
-                {showBalance
-                  ? "52,800.00 ETB"
-                  : "••••••"}
-              </p>
-
-              <p className="mt-1 text-xs opacity-50">
-                Available balance
-              </p>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <Button className="rounded-xl bg-background text-foreground hover:bg-background/90">
-              <ArrowDown className="mr-2 h-4 w-4" />
-              Deposit
-            </Button>
-
-            <Button
-              variant="outline"
-              className="rounded-xl border-background/20 bg-transparent text-background hover:bg-background/10 hover:text-background"
-            >
-              <ArrowUp className="mr-2 h-4 w-4" />
-              Withdraw
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Portfolio />
 
       {/* Market Overview */}
       <section className="mt-7">
