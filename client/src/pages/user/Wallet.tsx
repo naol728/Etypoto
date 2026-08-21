@@ -415,7 +415,7 @@ function TransactionList({
             key={transaction.id}
             className="transition hover:bg-muted/40"
           >
-            <CardContent className="flex items-center gap-3 p-4">
+            <CardContent className="flex items-center gap-3  ">
               <div
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${incoming
                   ? "bg-emerald-500/10"
