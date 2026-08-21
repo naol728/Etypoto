@@ -1,22 +1,13 @@
 import {
-  ArrowDown,
-  ArrowUp,
   ChevronRight,
   CircleDollarSign,
-  Eye,
-  EyeOff,
   TrendingDown,
   TrendingUp,
-  Wallet as WalletIcon,
 } from "lucide-react";
-import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { getMybalance } from "@/api/wallet";
-import { useSelector } from "react-redux";
 import { useAppSelector } from "@/store/hook";
 import Portfolio from "@/components/user/Portfolio";
 

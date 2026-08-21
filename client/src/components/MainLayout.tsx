@@ -4,7 +4,7 @@ import NavBar from "./NavBar";
 
 export default function MainLayout() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <Header />
 
       <main className="min-h-screen ">

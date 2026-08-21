@@ -1,3 +1,4 @@
+
 import { getMybalance } from "@/api/wallet";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -8,9 +9,14 @@ import {
     Wallet as WalletIcon,
 } from "lucide-react";
 import { useState } from "react";
-
+import {
+    Dialog,
+    DialogContent,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Deposit from "./Deposit";
 
 export default function Portfolio() {
     const [showBalance, setShowBalance] = useState(true);
@@ -23,11 +29,11 @@ export default function Portfolio() {
     const wallets = data?.wallets ?? [];
 
     const usdtWallet = wallets.find(
-        (wallet: any) => wallet.asset === "USDT"
+        (wallet: { asset: string }) => wallet.asset === "USDT"
     );
 
     const etbWallet = wallets.find(
-        (wallet: any) => wallet.asset === "ETB"
+        (wallet: { asset: string }) => wallet.asset === "ETB"
     );
 
     const usdtBalance = Number(usdtWallet?.available_balance ?? 0);
@@ -194,14 +200,19 @@ export default function Portfolio() {
 
                 {/* Actions */}
                 <div className=" grid grid-cols-2 gap-2">
-                    <Button
-                        variant="outline"
-                        className="h-8 rounded-lg border-border bg-background text-[11px] font-medium text-foreground shadow-none hover:bg-muted"
-                    >
-                        <ArrowDownToLine className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                        Deposit
-                    </Button>
 
+                    <Dialog>
+                        <DialogTrigger> <Button
+                            variant="outline"
+                            className="h-8 rounded-lg border-border bg-background text-[11px] font-medium text-foreground shadow-none hover:bg-muted"
+                        >
+                            <ArrowDownToLine className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                            Deposit
+                        </Button></DialogTrigger>
+                        <DialogContent>
+                            <Deposit />
+                        </DialogContent>
+                    </Dialog>
                     <Button
                         variant="outline"
                         className="h-8 rounded-lg border-border bg-background text-[11px] font-medium text-foreground shadow-none hover:bg-muted"
