@@ -33,3 +33,8 @@ export const depositWallet = async (
 
   return response.data;
 };
+
+export const getDeposit = async () => {
+  const response = await apiClient.get("/wallet/deposit");
+  return response.data;
+};

@@ -343,3 +343,148 @@ export const nowPaymentsWebhook = async (req: Request, res: Response) => {
     });
   }
 };
+
+const USDT_NETWORKS: Record<
+  string,
+  {
+    network: string;
+    blockchain: string;
+    name: string;
+  }
+> = {
+  USDTTRC20: {
+    network: "TRC20",
+    blockchain: "TRON",
+    name: "USDT on TRON",
+  },
+
+  USDTBSC: {
+    network: "BEP20",
+    blockchain: "BNB Smart Chain",
+    name: "USDT on BNB Smart Chain",
+  },
+
+  USDTERC20: {
+    network: "ERC20",
+    blockchain: "Ethereum",
+    name: "USDT on Ethereum",
+  },
+
+  USDTMATIC: {
+    network: "Polygon",
+    blockchain: "Polygon",
+    name: "USDT on Polygon",
+  },
+
+  USDTOP: {
+    network: "OP",
+    blockchain: "Optimism",
+    name: "USDT on Optimism",
+  },
+
+  USDTARC20: {
+    network: "ARC20",
+    blockchain: "Arbitrum",
+    name: "USDT on Arbitrum",
+  },
+
+  USDTARB: {
+    network: "ARB",
+    blockchain: "Arbitrum",
+    name: "USDT on Arbitrum",
+  },
+
+  USDTCELO: {
+    network: "CELO",
+    blockchain: "Celo",
+    name: "USDT on Celo",
+  },
+
+  USDTTON: {
+    network: "TON",
+    blockchain: "TON",
+    name: "USDT on TON",
+  },
+
+  USDTOPBNB: {
+    network: "OPBNB",
+    blockchain: "opBNB",
+    name: "USDT on opBNB",
+  },
+
+  USDTSOL: {
+    network: "SOL",
+    blockchain: "Solana",
+    name: "USDT on Solana",
+  },
+};
+
+export const getDeposit = async (req: Request, res: Response) => {
+  try {
+    const apiKey = process.env.NOWPAYMENTS_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({
+        status: false,
+        message: "NOWPayments API key is not configured",
+      });
+    }
+
+    const response = await fetch(
+      "https://api.nowpayments.io/v1/merchant/coins",
+      {
+        method: "GET",
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("NOWPayments error:", data);
+
+      return res.status(response.status).json({
+        status: false,
+        message: data?.message || "Failed to fetch NOWPayments currencies",
+      });
+    }
+
+    const selectedCurrencies: string[] = data?.selectedCurrencies || [];
+
+    const availableNetworks = selectedCurrencies
+      .filter((currency) => currency.startsWith("USDT"))
+      .map((currency) => {
+        const network = USDT_NETWORKS[currency];
+
+        if (!network) {
+          return {
+            currency,
+            network: currency.replace("USDT", ""),
+            blockchain: "Unknown",
+            name: currency,
+          };
+        }
+
+        return {
+          currency,
+          symbol: "USDT",
+          ...network,
+        };
+      });
+
+    return res.status(200).json({
+      status: true,
+      currency: "USDT",
+      networks: availableNetworks,
+    });
+  } catch (error) {
+    console.error("getDeposit error:", error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+    });
+  }
+};

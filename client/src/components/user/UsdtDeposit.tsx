@@ -5,10 +5,12 @@ import {
     Copy,
     Loader2,
     ShieldCheck,
+    AlertCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 
 import {
     Select,
@@ -22,32 +24,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import {
     depositWallet,
+    getDeposit,
     type CreateUsdtDepositResponse,
 } from "@/api/wallet";
-
-const NETWORKS = [
-    {
-        value: "TRC20",
-        label: "TRON",
-        description: "TRC20",
-    },
-    {
-        value: "ERC20",
-        label: "Ethereum",
-        description: "ERC20",
-    },
-    {
-        value: "BEP20",
-        label: "BNB Chain",
-        description: "BEP20",
-    },
-] as const;
-
-type Network = (typeof NETWORKS)[number]["value"];
+import { useQuery } from "@tanstack/react-query";
+import { NetworkIcon } from "@/lib/NetworkIcon";
 
 export default function UsdtDeposit() {
     const [amount, setAmount] = useState("");
-    const [network, setNetwork] = useState<Network>("TRC20");
+    const [network, setNetwork] = useState("TRC20");
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -55,10 +40,19 @@ export default function UsdtDeposit() {
     const [deposit, setDeposit] =
         useState<CreateUsdtDepositResponse | null>(null);
 
+    const { data, isLoading: isLoadingNetworks } = useQuery({
+        queryKey: ["getDeposit"],
+        queryFn: getDeposit,
+    });
+
     const [copied, setCopied] = useState(false);
 
-    const selectedNetwork = NETWORKS.find(
-        (item) => item.value === network
+    // Get available networks from backend data
+    const networks = data?.networks || [];
+
+    // Find selected network details
+    const selectedNetwork = networks.find(
+        (item) => item.network === network
     );
 
     const handleDeposit = async () => {
@@ -67,7 +61,7 @@ export default function UsdtDeposit() {
         const numericAmount = Number(amount);
 
         if (!amount || Number.isNaN(numericAmount)) {
-            setError("Enter a valid amount.");
+            setError("Please enter a valid amount.");
             return;
         }
 
@@ -103,15 +97,14 @@ export default function UsdtDeposit() {
     const copyAddress = async () => {
         if (!deposit?.payment.address) return;
 
-        await navigator.clipboard.writeText(
-            deposit.payment.address
+        await navigator.clipboard.writeText(deposit.payment.address);
+
+        window?.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.(
+            "success"
         );
 
         setCopied(true);
-
-        setTimeout(() => {
-            setCopied(false);
-        }, 1500);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     /* ---------------------------------
@@ -120,105 +113,103 @@ export default function UsdtDeposit() {
 
     if (deposit) {
         return (
-            <div className="w-full space-y-2 px-1 pb-2">
-
-                {/* Header */}
-                <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-                        <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
-                    </div>
-
-                    <div>
-                        <p className="text-xs font-semibold text-foreground">
+            <Card className="w-full border-border/60 shadow-sm rounded-xl overflow-hidden">
+                <CardContent className="p-2.5 space-y-2">
+                    {/* Header */}
+                    <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 shrink-0">
+                            <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground leading-none">
                             Deposit USDT
                         </p>
+                    </div>
 
-                        <p className="text-[8px] text-muted-foreground">
-                            Send USDT to this address
+                    {/* Network */}
+                    <div className="flex items-center justify-between rounded-lg bg-muted/40 px-2 py-1.5">
+                        <span className="text-[10px] text-muted-foreground">
+                            Network
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <NetworkIcon
+                                currency={selectedNetwork?.currency || ""}
+                            />
+                            <span className="text-[10px] font-semibold text-foreground">
+                                {selectedNetwork?.blockchain} (
+                                {selectedNetwork?.network})
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="rounded-lg bg-primary/5 px-2 py-2">
+                        <p className="text-[10px] text-muted-foreground">
+                            Send exactly
                         </p>
+                        <div className="mt-0.5 flex items-baseline gap-1">
+                            <span className="text-base font-bold text-foreground">
+                                {deposit.payment.amount}
+                            </span>
+                            <span className="text-[10px] font-semibold text-muted-foreground">
+                                {data?.currency || "USDT"}
+                            </span>
+                        </div>
                     </div>
-                </div>
 
-                {/* Network */}
-                <div className="flex items-center justify-between rounded-lg bg-muted/50 px-2.5 py-1.5">
-                    <span className="text-[9px] text-muted-foreground">
-                        Network
-                    </span>
+                    {/* Address */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={copyAddress}
+                            className="w-full rounded-lg bg-muted/40 px-2 py-1.5 text-left transition active:scale-[0.98] active:bg-muted/60"
+                        >
+                            <p className="break-all font-mono text-[10px] leading-relaxed text-foreground select-all">
+                                {deposit.payment.address}
+                            </p>
+                        </button>
 
-                    <span className="text-[9px] font-semibold text-foreground">
-                        {selectedNetwork?.label} ({selectedNetwork?.description})
-                    </span>
-                </div>
-
-                {/* Amount */}
-                <div className="rounded-lg border border-border bg-card px-2.5 py-2">
-                    <p className="text-[8px] text-muted-foreground">
-                        Send exactly
-                    </p>
-
-                    <div className="mt-0.5 flex items-baseline gap-1">
-                        <span className="text-lg font-bold text-foreground">
-                            {deposit.payment.amount}
-                        </span>
-
-                        <span className="text-[9px] font-semibold text-muted-foreground">
-                            USDT
-                        </span>
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="mt-1 h-7 w-full rounded-lg text-[10px] font-medium"
+                            onClick={copyAddress}
+                        >
+                            {copied ? (
+                                <>
+                                    <Check className="mr-1 h-3 w-3" />
+                                    Copied
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="mr-1 h-3 w-3" />
+                                    Copy address
+                                </>
+                            )}
+                        </Button>
                     </div>
-                </div>
 
-                {/* Address */}
-                <div>
-                    <p className="mb-1 text-[8px] text-muted-foreground">
-                        Deposit address
-                    </p>
-
-                    <div className="rounded-lg border border-border bg-muted/30 p-2">
-                        <p className="break-all font-mono text-[8px] leading-3.5 text-foreground">
-                            {deposit.payment.address}
+                    {/* Notice */}
+                    <div className="flex gap-1.5 rounded-lg border border-primary/15 bg-primary/5 px-2 py-1.5">
+                        <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+                        <p className="text-[10px] leading-relaxed text-muted-foreground">
+                            Send only USDT on {selectedNetwork?.blockchain}.
+                            Other networks may be lost.
                         </p>
                     </div>
 
                     <Button
-                        variant="outline"
-                        className="mt-1.5 h-7 w-full rounded-lg text-[9px]"
-                        onClick={copyAddress}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-full rounded-lg text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                            setDeposit(null);
+                            setAmount("");
+                        }}
                     >
-                        {copied ? (
-                            <>
-                                <Check className="mr-1 h-3 w-3" />
-                                Copied
-                            </>
-                        ) : (
-                            <>
-                                <Copy className="mr-1 h-3 w-3" />
-                                Copy Address
-                            </>
-                        )}
+                        New deposit
                     </Button>
-                </div>
-
-                {/* Warning */}
-                <div className="flex gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 p-2">
-                    <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-amber-600" />
-
-                    <p className="text-[8px] leading-3.5 text-muted-foreground">
-                        Send only USDT using the selected network.
-                        Sending another network may result in loss of funds.
-                    </p>
-                </div>
-
-                <Button
-                    variant="outline"
-                    className="h-7 w-full rounded-lg text-[9px]"
-                    onClick={() => {
-                        setDeposit(null);
-                        setAmount("");
-                    }}
-                >
-                    New Deposit
-                </Button>
-            </div>
+                </CardContent>
+            </Card>
         );
     }
 
@@ -227,158 +218,165 @@ export default function UsdtDeposit() {
     --------------------------------- */
 
     return (
-        <div className="w-full space-y-2 px-1">
-
-            {/* Header */}
-            <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-                    <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
-                </div>
-
-                <div>
-                    <p className="text-xs font-semibold text-foreground">
+        <Card className="w-full border-border/60 shadow-sm rounded-xl overflow-hidden">
+            <CardContent className="p-2.5 space-y-2">
+                {/* Header */}
+                <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 shrink-0">
+                        <ArrowDownToLine className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <p className="text-xs font-semibold text-foreground leading-none">
                         Deposit USDT
                     </p>
-
-                    <p className="text-[8px] text-muted-foreground">
-                        Add USDT to your wallet
-                    </p>
                 </div>
-            </div>
 
-            {/* Amount */}
-            <div>
-                <div className="mb-1 flex items-center justify-between">
-                    <label className="text-[9px] font-medium text-foreground">
-                        Amount
+                {/* Amount Input */}
+                <div>
+                    <div className="mb-1 flex items-center justify-between">
+                        <label className="text-[10px] font-medium text-foreground">
+                            Amount
+                        </label>
+                        <span className="text-[10px] text-muted-foreground">
+                            Min 5 USDT
+                        </span>
+                    </div>
+
+                    <div className="relative">
+                        <Input
+                            type="number"
+                            inputMode="decimal"
+                            min="5"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            className="h-8 rounded-lg border-border bg-background pr-11 text-xs focus-visible:ring-1 focus-visible:ring-primary/30"
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-muted-foreground">
+                            {data?.currency || "USDT"}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Network Selection */}
+                <div>
+                    <label className="mb-1 block text-[10px] font-medium text-foreground">
+                        Network
                     </label>
 
-                    <span className="text-[8px] text-muted-foreground">
-                        Min 5 USDT
-                    </span>
+                    <Select
+                        value={network}
+                        onValueChange={(value) => setNetwork(value)}
+                        disabled={isLoadingNetworks}
+                    >
+                        <SelectTrigger className="h-8 w-full rounded-lg border-border bg-background text-[10px]">
+                            <NetworkIcon currency={selectedNetwork?.currency} />
+
+                            <SelectValue placeholder="Select network" />
+                        </SelectTrigger>
+
+                        <SelectContent className="rounded-lg">
+                            {isLoadingNetworks ? (
+                                <div className="flex items-center justify-center p-2">
+                                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : (
+                                networks.map((item) => (
+                                    <SelectItem
+                                        key={item.currency}
+                                        value={item.network}
+                                        className="py-1.5 px-2 rounded-md"
+                                    >
+                                        <div className="flex items-center gap-1.5">
+                                            <NetworkIcon
+                                                currency={item.currency}
+                                            />
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-medium">
+                                                    {item.blockchain}
+                                                </span>
+                                                <span className="text-[9px] text-muted-foreground">
+                                                    {item.network}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </SelectItem>
+                                ))
+                            )}
+                        </SelectContent>
+                    </Select>
                 </div>
 
-                <div className="relative">
-                    <Input
-                        type="number"
-                        inputMode="decimal"
-                        min="5"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="h-8 rounded-lg border-border bg-background pr-12 text-xs"
-                    />
+                {/* Order Summary */}
+                <div className="space-y-1 rounded-lg bg-muted/40 px-2 py-1.5">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground">
+                            Asset
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <NetworkIcon currency="usdt" />
+                            <span className="text-[10px] font-semibold">
+                                {data?.currency || "USDT"}
+                            </span>
+                        </div>
+                    </div>
 
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground">
-                        USDT
-                    </span>
-                </div>
-            </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground">
+                            Network
+                        </span>
+                        <div className="flex items-center gap-1">
 
-            {/* Network */}
-            <div>
-                <label className="mb-1 block text-[9px] font-medium text-foreground">
-                    Network
-                </label>
+                            <NetworkIcon currency={selectedNetwork?.currency} />
+                            <span className="text-[10px] font-semibold">
+                                {selectedNetwork?.blockchain || network}
+                            </span>
+                        </div>
+                    </div>
 
-                <Select
-                    value={network}
-                    onValueChange={(value) =>
-                        setNetwork(value as Network)
-                    }
-                >
-                    <SelectTrigger className="h-8 rounded-lg border-border bg-background text-[9px]">
-                        <SelectValue />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                        {NETWORKS.map((item) => (
-                            <SelectItem
-                                key={item.value}
-                                value={item.value}
-                                className="text-[10px]"
-                            >
-                                {item.label} ({item.description})
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* Summary */}
-            <div className="rounded-lg bg-muted/50 px-2.5 py-2">
-                <div className="flex justify-between">
-                    <span className="text-[8px] text-muted-foreground">
-                        Asset
-                    </span>
-
-                    <span className="text-[8px] font-semibold">
-                        USDT
-                    </span>
+                    <div className="flex items-center justify-between border-t border-border/60 pt-1">
+                        <span className="text-[10px] text-muted-foreground">
+                            Total
+                        </span>
+                        <span className="text-xs font-bold text-foreground">
+                            {amount || "0.00"} {data?.currency || "USDT"}
+                        </span>
+                    </div>
                 </div>
 
-                <div className="mt-1 flex justify-between">
-                    <span className="text-[8px] text-muted-foreground">
-                        Network
-                    </span>
-
-                    <span className="text-[8px] font-semibold">
-                        {selectedNetwork?.label}
-                    </span>
-                </div>
-
-                <div className="mt-1 flex justify-between">
-                    <span className="text-[8px] text-muted-foreground">
-                        Amount
-                    </span>
-
-                    <span className="text-[8px] font-semibold">
-                        {amount || "0"} USDT
-                    </span>
-                </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-                <Alert
-                    variant="destructive"
-                    className="rounded-lg px-2 py-1.5"
-                >
-                    <AlertDescription className="text-[8px]">
-                        {error}
-                    </AlertDescription>
-                </Alert>
-            )}
-
-            {/* Submit */}
-            <Button
-                className="h-8 w-full rounded-lg text-[10px] font-semibold"
-                onClick={handleDeposit}
-                disabled={loading}
-            >
-                {loading ? (
-                    <>
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                        Creating...
-                    </>
-                ) : (
-                    <>
-                        <ArrowDownToLine className="mr-1 h-3 w-3" />
-                        Generate Address
-                    </>
+                {/* Error Message */}
+                {error && (
+                    <Alert
+                        variant="destructive"
+                        className="rounded-lg px-2 py-1.5"
+                    >
+                        <AlertCircle className="h-3 w-3" />
+                        <AlertDescription className="text-[10px]">
+                            {error}
+                        </AlertDescription>
+                    </Alert>
                 )}
-            </Button>
 
-            {/* Tiny warning */}
-            <div className="flex items-center gap-1.5 px-1">
-                <ShieldCheck className="h-3 w-3 shrink-0 text-primary" />
-
-                <p className="text-[8px] leading-3 text-muted-foreground">
-                    Make sure the selected network matches your sending
-                    wallet.
-                </p>
-            </div>
-        </div>
+                {/* Submit Button */}
+                <Button
+                    size="sm"
+                    className="h-8 w-full rounded-lg text-[10px] font-semibold active:scale-[0.98] transition"
+                    onClick={handleDeposit}
+                    disabled={loading || isLoadingNetworks}
+                >
+                    {loading ? (
+                        <>
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            Creating...
+                        </>
+                    ) : (
+                        <>
+                            <ArrowDownToLine className="mr-1 h-3 w-3" />
+                            Generate address
+                        </>
+                    )}
+                </Button>
+            </CardContent>
+        </Card>
     );
 }
