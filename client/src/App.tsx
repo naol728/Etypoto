@@ -12,6 +12,7 @@ import P2P from "./pages/user/P2P";
 import Orders from "./pages/user/Orders";
 import Profile from "./pages/user/Profile";
 import Kyc from "./pages/user/Kyc";
+import Loading from "./components/user/Loading";
 
 function App() {
   const dispatch = useAppDispatch();
@@ -48,9 +49,7 @@ function App() {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        Loading...
-      </div>
+      <Loading />
     );
   }
 
@@ -75,8 +74,6 @@ function App() {
       </>
     );
   }
-
-
 
   return (
     <>
