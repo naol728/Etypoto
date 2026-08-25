@@ -1,3 +1,4 @@
+/*eslint-disable*/
 import { useState } from "react";
 import {
     ArrowDownToLine,
@@ -5,7 +6,6 @@ import {
     Copy,
     Loader2,
     ShieldCheck,
-    AlertCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,32 +20,42 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
 import {
     depositWallet,
     getDeposit,
     type CreateUsdtDepositResponse,
 } from "@/api/wallet";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { NetworkIcon } from "@/lib/NetworkIcon";
+import { toast } from "sonner";
 
 export default function UsdtDeposit() {
     const [amount, setAmount] = useState("");
     const [network, setNetwork] = useState("TRC20");
 
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
     const [deposit, setDeposit] =
         useState<CreateUsdtDepositResponse | null>(null);
+
+    const [copied, setCopied] = useState(false);
 
     const { data, isLoading: isLoadingNetworks } = useQuery({
         queryKey: ["getDeposit"],
         queryFn: getDeposit,
     });
 
-    const [copied, setCopied] = useState(false);
+    const { mutate, isPending } = useMutation({
+        mutationFn: depositWallet,
+        onSuccess: (response) => {
+            setDeposit(response);
+        },
+        onError: (err: unknown) => {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "Failed to create deposit.";
+            toast.error(message);
+        },
+    });
 
     // Get available networks from backend data
     const networks = data?.networks || [];
@@ -55,43 +65,23 @@ export default function UsdtDeposit() {
         (item) => item.network === network
     );
 
-    const handleDeposit = async () => {
-        setError(null);
-
+    const handleDeposit = () => {
         const numericAmount = Number(amount);
 
         if (!amount || Number.isNaN(numericAmount)) {
-            setError("Please enter a valid amount.");
+            toast.error("Please enter a valid amount.");
             return;
         }
 
-        if (numericAmount < 5) {
-            setError("Minimum deposit is 5 USDT.");
+        if (numericAmount < 1) {
+            toast.error("Minimum deposit is 1 USDT.");
             return;
         }
 
-        try {
-            setLoading(true);
-
-            const response = await depositWallet({
-                amount: numericAmount,
-                network,
-            });
-
-            if (!response.status) {
-                throw new Error("Unable to create deposit.");
-            }
-
-            setDeposit(response);
-        } catch (err: unknown) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to create deposit."
-            );
-        } finally {
-            setLoading(false);
-        }
+        mutate({
+            amount: numericAmount,
+            network,
+        });
     };
 
     const copyAddress = async () => {
@@ -237,7 +227,7 @@ export default function UsdtDeposit() {
                             Amount
                         </label>
                         <span className="text-[10px] text-muted-foreground">
-                            Min 5 USDT
+                            Min 1 USDT
                         </span>
                     </div>
 
@@ -245,7 +235,7 @@ export default function UsdtDeposit() {
                         <Input
                             type="number"
                             inputMode="decimal"
-                            min="5"
+                            min="1"
                             step="0.01"
                             placeholder="0.00"
                             value={amount}
@@ -270,8 +260,7 @@ export default function UsdtDeposit() {
                         disabled={isLoadingNetworks}
                     >
                         <SelectTrigger className="h-8 w-full rounded-lg border-border bg-background text-[10px]">
-                            <NetworkIcon currency={selectedNetwork?.currency} />
-
+                            <NetworkIcon currency={selectedNetwork?.currency || ""} />
                             <SelectValue placeholder="Select network" />
                         </SelectTrigger>
 
@@ -326,8 +315,7 @@ export default function UsdtDeposit() {
                             Network
                         </span>
                         <div className="flex items-center gap-1">
-
-                            <NetworkIcon currency={selectedNetwork?.currency} />
+                            <NetworkIcon currency={selectedNetwork?.currency || ""} />
                             <span className="text-[10px] font-semibold">
                                 {selectedNetwork?.blockchain || network}
                             </span>
@@ -344,27 +332,14 @@ export default function UsdtDeposit() {
                     </div>
                 </div>
 
-                {/* Error Message */}
-                {error && (
-                    <Alert
-                        variant="destructive"
-                        className="rounded-lg px-2 py-1.5"
-                    >
-                        <AlertCircle className="h-3 w-3" />
-                        <AlertDescription className="text-[10px]">
-                            {error}
-                        </AlertDescription>
-                    </Alert>
-                )}
-
                 {/* Submit Button */}
                 <Button
                     size="sm"
                     className="h-8 w-full rounded-lg text-[10px] font-semibold active:scale-[0.98] transition"
                     onClick={handleDeposit}
-                    disabled={loading || isLoadingNetworks}
+                    disabled={isPending || isLoadingNetworks}
                 >
-                    {loading ? (
+                    {isPending ? (
                         <>
                             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                             Creating...

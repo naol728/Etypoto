@@ -44,13 +44,17 @@ export const createDeposit = catchAsync(async (req: Request, res: Response) => {
 
   const { amount, network } = req.body;
 
-  if (!amount || Number(amount) <= 0) {
+  const depositAmount = Number(amount);
+
+  // 1. Validate amount
+  if (!Number.isFinite(depositAmount) || depositAmount <= 0) {
     return res.status(400).json({
       status: false,
       message: "Invalid deposit amount",
     });
   }
 
+  // 2. Validate network
   if (!network) {
     return res.status(400).json({
       status: false,
@@ -58,13 +62,89 @@ export const createDeposit = catchAsync(async (req: Request, res: Response) => {
     });
   }
 
+  /*
+   * Map your frontend network names
+   * to NOWPayments currency codes.
+   */
+  const networkCurrencies: Record<string, string> = {
+    trc20: "usdttrc20",
+    erc20: "usdterc20",
+    bep20: "usdtbsc",
+    solana: "usdtsol",
+  };
+
+  const payCurrency = networkCurrencies[network.toLowerCase()];
+
+  if (!payCurrency) {
+    return res.status(400).json({
+      status: false,
+      message: "Unsupported USDT network",
+    });
+  }
+
+  // 3. Get NOWPayments minimum amount
+  const minAmountUrl = new URL("https://api.nowpayments.io/v1/min-amount");
+
+  minAmountUrl.searchParams.set("currency_from", payCurrency);
+
+  minAmountUrl.searchParams.set("currency_to", payCurrency);
+
+  minAmountUrl.searchParams.set("fiat_equivalent", "usd");
+
+  minAmountUrl.searchParams.set("is_fixed_rate", "false");
+
+  minAmountUrl.searchParams.set("is_fee_paid_by_user", "false");
+
+  const minAmountResponse = await fetch(minAmountUrl.toString(), {
+    method: "GET",
+    headers: {
+      "x-api-key": process.env.NOWPAYMENTS_API_KEY!,
+    },
+  });
+
+  const minAmountData = await minAmountResponse.json();
+
+  if (!minAmountResponse.ok) {
+    console.error("NOWPayments minimum amount error:", minAmountData);
+
+    return res.status(500).json({
+      status: false,
+      message: "Failed to check minimum deposit amount",
+    });
+  }
+
+  const minimumAmount = Number(minAmountData.min_amount);
+
+  if (!Number.isFinite(minimumAmount) || minimumAmount <= 0) {
+    console.error("Invalid NOWPayments minimum amount:", minAmountData);
+
+    return res.status(500).json({
+      status: false,
+      message: "Invalid minimum amount received from NOWPayments",
+    });
+  }
+
+  // 4. Check user's requested amount against NOWPayments minimum
+  if (depositAmount < minimumAmount) {
+    return res.status(400).json({
+      status: false,
+      code: "MINIMUM_DEPOSIT_AMOUNT",
+      message: `Minimum deposit amount is ${minimumAmount} USDT`,
+      minimum_amount: minimumAmount,
+      requested_amount: depositAmount,
+      currency: payCurrency,
+      network,
+    });
+  }
+
+  // 5. Create your transaction only after minimum check passes
   const { data: transaction, error: transactionError } = await supabase
     .from("transactions")
     .insert({
       user_id: userId,
       type: "deposit",
       asset: "USDT",
-      amount: Number(amount),
+      amount: depositAmount,
       status: "pending",
       provider: "nowpayments",
       network,
@@ -81,27 +161,27 @@ export const createDeposit = catchAsync(async (req: Request, res: Response) => {
     });
   }
 
+  // 6. Create NOWPayments payment
   const response = await fetch("https://api.nowpayments.io/v1/payment", {
     method: "POST",
-
     headers: {
       "x-api-key": process.env.NOWPAYMENTS_API_KEY!,
       "Content-Type": "application/json",
     },
-
     body: JSON.stringify({
-      price_amount: Number(amount),
+      price_amount: depositAmount,
       price_currency: "usd",
 
-      // Change this to the exact NOWPayments
-      // currency code for the network you support.
-      pay_currency: "usdttrc20",
+      // Dynamic network currency
+      pay_currency: payCurrency,
 
       order_id: transaction.id,
 
       order_description: `EtyPoto USDT deposit ${transaction.id}`,
 
       ipn_callback_url: process.env.NOWPAYMENTS_IPN_URL,
+
+      is_fee_paid_by_user: false,
     }),
   });
 
@@ -124,7 +204,7 @@ export const createDeposit = catchAsync(async (req: Request, res: Response) => {
     });
   }
 
-  // Save NOWPayments information
+  // 7. Save NOWPayments information
   const { error: updateError } = await supabase
     .from("transactions")
     .update({
@@ -142,6 +222,7 @@ export const createDeposit = catchAsync(async (req: Request, res: Response) => {
     console.error(updateError);
   }
 
+  // 8. Return payment information
   return res.status(201).json({
     status: true,
 
@@ -149,15 +230,10 @@ export const createDeposit = catchAsync(async (req: Request, res: Response) => {
 
     payment: {
       payment_id: payment.payment_id,
-
       address: payment.pay_address,
-
       amount: payment.pay_amount,
-
       currency: payment.pay_currency,
-
       status: payment.payment_status,
-
       expiration: payment.expiration_estimate_date,
     },
   });

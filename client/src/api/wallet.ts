@@ -1,3 +1,4 @@
+import { handleApiResponse } from "@/lib/handleapiresponse";
 import apiClient from "./apiClient";
 
 export const getMybalance = async () => {
@@ -7,7 +8,7 @@ export const getMybalance = async () => {
 
 export interface CreateUsdtDepositRequest {
   amount: number;
-  network: "TRC20" | "ERC20" | "BEP20";
+  network: string;
 }
 
 export interface CreateUsdtDepositResponse {
@@ -26,15 +27,11 @@ export interface CreateUsdtDepositResponse {
 export const depositWallet = async (
   data: CreateUsdtDepositRequest,
 ): Promise<CreateUsdtDepositResponse> => {
-  const response = await apiClient.post<CreateUsdtDepositResponse>(
-    "/wallet/deposit/usdt",
-    data,
+  return handleApiResponse(() =>
+    apiClient.post<CreateUsdtDepositResponse>("/wallet/deposit/usdt", data),
   );
-
-  return response.data;
 };
 
 export const getDeposit = async () => {
-  const response = await apiClient.get("/wallet/deposit");
-  return response.data;
+  return handleApiResponse(() => apiClient.get("/wallet/deposit"));
 };
