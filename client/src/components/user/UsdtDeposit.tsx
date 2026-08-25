@@ -29,6 +29,13 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { NetworkIcon } from "@/lib/NetworkIcon";
 import { toast } from "sonner";
 
+// Define the network item type
+interface NetworkItem {
+    network: string;
+    blockchain: string;
+    currency: string;
+}
+
 export default function UsdtDeposit() {
     const [amount, setAmount] = useState("");
     const [network, setNetwork] = useState("TRC20");
@@ -58,11 +65,11 @@ export default function UsdtDeposit() {
     });
 
     // Get available networks from backend data
-    const networks = data?.networks || [];
+    const networks: NetworkItem[] = data?.networks || [];
 
     // Find selected network details
     const selectedNetwork = networks.find(
-        (item) => item.network === network
+        (item: NetworkItem) => item.network === network
     );
 
     const handleDeposit = () => {
@@ -89,9 +96,12 @@ export default function UsdtDeposit() {
 
         await navigator.clipboard.writeText(deposit.payment.address);
 
-        window?.Telegram?.WebApp?.HapticFeedback?.notificationOccurred?.(
-            "success"
-        );
+        // Check if Telegram WebApp is available
+        if (window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred(
+                "success"
+            );
+        }
 
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -256,7 +266,7 @@ export default function UsdtDeposit() {
 
                     <Select
                         value={network}
-                        onValueChange={(value) => setNetwork(value)}
+                        onValueChange={(value: string) => setNetwork(value)}
                         disabled={isLoadingNetworks}
                     >
                         <SelectTrigger className="h-8 w-full rounded-lg border-border bg-background text-[10px]">
@@ -270,7 +280,7 @@ export default function UsdtDeposit() {
                                     <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                                 </div>
                             ) : (
-                                networks.map((item) => (
+                                networks.map((item: NetworkItem) => (
                                     <SelectItem
                                         key={item.currency}
                                         value={item.network}
